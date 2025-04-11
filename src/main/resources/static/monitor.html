@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频监控系统 - 实时监控</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/monitor.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">视频监控系统</a>
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a href="index.html" class="nav-link">控制台</a>
+            </li>
+            <li class="nav-item">
+                <a href="monitor.html" class="nav-link active">实时监控</a>
+            </li>
+            <li class="nav-item">
+                <a href="playback.html" class="nav-link">录像回放</a>
+            </li>
+            <li class="nav-item">
+                <a href="device-management.html" class="nav-link">设备管理</a>
+            </li>
+            <li class="nav-item">
+                <a href="alarm-management.html" class="nav-link">报警管理</a>
+            </li>
+            <li class="nav-item user-menu">
+                <div class="user-menu-toggle" onclick="toggleUserMenu()">
+                    <div class="user-avatar">A</div>
+                    <span>管理员</span>
+                </div>
+                <div class="user-dropdown" id="userDropdown">
+                    <a href="profile.html">个人信息</a>
+                    <a href="settings.html">系统设置</a>
+                    <a href="login.html">退出登录</a>
+                </div>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 侧边栏 - 设备列表 -->
+        <div class="sidebar">
+            <div class="device-list-header">
+                <h3 class="device-list-title">设备列表</h3>
+            </div>
+            <input type="text" class="device-search" placeholder="搜索设备...">
+            <div class="device-filter">
+                <button class="filter-btn active" data-filter="all">全部</button>
+                <button class="filter-btn" data-filter="online">在线</button>
+                <button class="filter-btn" data-filter="offline">离线</button>
+            </div>
+            <div class="device-list" id="deviceList">
+                <!-- 设备列表将通过JavaScript动态加载 -->
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 视频控制区 -->
+            <div class="video-controls">
+                <div class="layout-controls">
+                    <button class="layout-btn" data-layout="1">单屏</button>
+                    <button class="layout-btn active" data-layout="4">四分屏</button>
+                    <button class="layout-btn" data-layout="9">九分屏</button>
+                </div>
+                <div class="action-controls">
+                    <button class="action-btn" id="snapshotBtn">拍照</button>
+                    <button class="action-btn" id="recordBtn">录制</button>
+                    <button class="action-btn danger" id="alarmBtn">报警</button>
+                </div>
+            </div>
+
+            <!-- 视频网格 -->
+            <div class="video-container">
+                <div class="video-grid grid-4" id="videoGrid">
+                    <!-- 视频面板将通过JavaScript动态加载 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报警模态框 -->
+    <div class="modal" id="alarmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">触发报警</h3>
+                <button class="modal-close" onclick="closeModal('alarmModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>确定要为当前选中的设备触发手动报警吗？</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="closeModal('alarmModal')">取消</button>
+                <button class="modal-btn primary" onclick="triggerAlarm()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/monitor.js"></script>
+</body>
+</html>

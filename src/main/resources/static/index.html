@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频监控系统 - 控制台</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">视频监控系统</a>
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a href="index.html" class="nav-link active">控制台</a>
+            </li>
+            <li class="nav-item">
+                <a href="monitor.html" class="nav-link">实时监控</a>
+            </li>
+            <li class="nav-item">
+                <a href="playback.html" class="nav-link">录像回放</a>
+            </li>
+            <li class="nav-item">
+                <a href="device-management.html" class="nav-link">设备管理</a>
+            </li>
+            <li class="nav-item">
+                <a href="alarm-management.html" class="nav-link">报警管理</a>
+            </li>
+            <li class="nav-item user-menu">
+                <div class="user-menu-toggle" onclick="toggleUserMenu()">
+                    <div class="user-avatar">A</div>
+                    <span>管理员</span>
+                </div>
+                <div class="user-dropdown" id="userDropdown">
+                    <a href="profile.html">个人信息</a>
+                    <a href="settings.html">系统设置</a>
+                    <a href="login.html">退出登录</a>
+                </div>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-card-icon">📹</div>
+                <div class="stat-label">设备总数</div>
+                <div class="stat-value" id="deviceTotal">--</div>
+                <div>
+                    <span class="device-online" id="deviceOnline">在线: --</span> | 
+                    <span class="device-offline" id="deviceOffline">离线: --</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-icon">🔔</div>
+                <div class="stat-label">今日报警</div>
+                <div class="stat-value" id="alarmTotal">--</div>
+                <div>
+                    <span class="alarm-urgent" id="alarmUrgent">紧急: --</span> | 未处理: <span id="alarmUnhandled">--</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-icon">💾</div>
+                <div class="stat-label">存储空间</div>
+                <div class="stat-value" id="storagePercent">--</div>
+                <div>总计: <span id="storageTotal">--</span> | 可用: <span id="storageAvailable">--</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-icon">👤</div>
+                <div class="stat-label">在线用户</div>
+                <div class="stat-value" id="userTotal">--</div>
+                <div>操作员: <span id="userOperator">--</span> | 普通用户: <span id="userNormal">--</span></div>
+            </div>
+        </div>
+
+        <!-- 主内容区域 -->
+        <div class="content-grid">
+            <!-- 左侧内容 -->
+            <div>
+                <!-- 视频预览 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">实时监控预览</h3>
+                        <a href="monitor.html" class="view-all">查看全部</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="video-grid" id="videoPreviewGrid">
+                            <!-- 视频预览将通过JavaScript动态加载 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 设备状态 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">设备状态</h3>
+                        <a href="device-management.html" class="view-all">管理设备</a>
+                    </div>
+                    <div class="card-body">
+                        <ul class="device-list" id="deviceStatusList">
+                            <!-- 设备状态将通过JavaScript动态加载 -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧内容 -->
+            <div>
+                <!-- 最近报警 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">最近报警</h3>
+                        <a href="alarm-management.html" class="view-all">查看全部</a>
+                    </div>
+                    <div class="card-body">
+                        <ul class="alarm-list" id="recentAlarmList">
+                            <!-- 报警列表将通过JavaScript动态加载 -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

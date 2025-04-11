@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频监控系统 - 报警管理</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/alarm-management.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">视频监控系统</a>
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a href="index.html" class="nav-link">控制台</a>
+            </li>
+            <li class="nav-item">
+                <a href="monitor.html" class="nav-link">实时监控</a>
+            </li>
+            <li class="nav-item">
+                <a href="playback.html" class="nav-link">录像回放</a>
+            </li>
+            <li class="nav-item">
+                <a href="device-management.html" class="nav-link">设备管理</a>
+            </li>
+            <li class="nav-item">
+                <a href="alarm-management.html" class="nav-link active">报警管理</a>
+            </li>
+            <li class="nav-item user-menu">
+                <div class="user-menu-toggle" onclick="toggleUserMenu()">
+                    <div class="user-avatar">A</div>
+                    <span>管理员</span>
+                </div>
+                <div class="user-dropdown" id="userDropdown">
+                    <a href="profile.html">个人信息</a>
+                    <a href="settings.html">系统设置</a>
+                    <a href="login.html">退出登录</a>
+                </div>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h1 class="page-title">报警管理</h1>
+            <div class="alarm-stats">
+                <div class="stat-item">
+                    紧急: <span class="stat-count count-urgent" id="urgentCount">--</span>
+                </div>
+                <div class="stat-item">
+                    重要: <span class="stat-count count-important" id="importantCount">--</span>
+                </div>
+                <div class="stat-item">
+                    普通: <span class="stat-count count-normal" id="normalCount">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 搜索和过滤区域 -->
+        <div class="search-filter">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label">设备</label>
+                    <select class="filter-select" id="deviceFilter">
+                        <option value="">所有设备</option>
+                        <!-- 设备选项将通过JavaScript动态加载 -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">报警类型</label>
+                    <select class="filter-select" id="typeFilter">
+                        <option value="">所有类型</option>
+                        <option value="MOTION_DETECT">移动侦测</option>
+                        <option value="AREA_INTRUSION">区域入侵</option>
+                        <option value="DEVICE_OFFLINE">设备离线</option>
+                        <option value="MANUAL">手动触发</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">报警级别</label>
+                    <select class="filter-select" id="levelFilter">
+                        <option value="">所有级别</option>
+                        <option value="URGENT">紧急</option>
+                        <option value="IMPORTANT">重要</option>
+                        <option value="NORMAL">普通</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">处理状态</label>
+                    <select class="filter-select" id="statusFilter">
+                        <option value="">所有状态</option>
+                        <option value="UNHANDLED">未处理</option>
+                        <option value="HANDLING">处理中</option>
+                        <option value="HANDLED">已处理</option>
+                        <option value="IGNORED">已忽略</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label">时间范围</label>
+                    <div class="date-range">
+                        <input type="date" class="filter-date" id="startDate">
+                        <span>至</span>
+                        <input type="date" class="filter-date" id="endDate">
+                    </div>
+                </div>
+            </div>
+            <div class="button-row">
+                <button class="btn" id="resetFilterBtn">重置</button>
+                <button class="btn btn-primary" id="searchBtn">搜索</button>
+            </div>
+        </div>
+
+        <!-- 报警表格 -->
+        <div class="alarm-table-container">
+            <table class="alarm-table">
+                <thead>
+                    <tr>
+                        <th>设备</th>
+                        <th>报警类型</th>
+                        <th>报警级别</th>
+                        <th>报警时间</th>
+                        <th>处理状态</th>
+                        <th>处理人</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="alarmTableBody">
+                    <!-- 报警数据将通过JavaScript动态加载 -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        <div class="pagination-container">
+            <div class="pagination-info" id="paginationInfo">
+                显示 <span id="startItem">--</span> 到 <span id="endItem">--</span> 条，共 <span id="totalItems">--</span> 条
+            </div>
+            <div class="pagination" id="pagination">
+                <!-- 分页将通过JavaScript动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 报警详情模态框 -->
+    <div class="modal" id="alarmDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">报警详情</h3>
+                <button class="modal-close" onclick="closeModal('alarmDetailModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alarm-preview-card">
+                    <div class="alarm-preview-header">
+                        <div class="alarm-preview-device" id="detailDeviceName">--</div>
+                        <div class="alarm-preview-time" id="detailTime">--</div>
+                    </div>
+                    <div class="alarm-preview-body">
+                        <div class="alarm-preview-details">
+                            <p><strong>报警类型：</strong><span id="detailType">--</span></p>
+                            <p><strong>报警级别：</strong><span id="detailLevel">--</span></p>
+                            <p><strong>报警详情：</strong><span id="detailInfo">--</span></p>
+                            <p><strong>处理状态：</strong><span id="detailStatus">--</span></p>
+                            <p id="detailHandlerContainer"><strong>处理人：</strong><span id="detailHandler">--</span></p>
+                            <p id="detailHandleTimeContainer"><strong>处理时间：</strong><span id="detailHandleTime">--</span></p>
+                            <p id="detailHandleNoteContainer"><strong>处理备注：</strong><span id="detailHandleNote">--</span></p>
+                        </div>
+                        <div class="alarm-preview-images" id="detailImages">
+                            <!-- 报警图片将通过JavaScript动态加载 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="closeModal('alarmDetailModal')">关闭</button>
+                <button class="modal-btn primary" id="handleAlarmBtn" onclick="showHandleModal()">处理报警</button>
+                <button class="modal-btn" id="ignoreAlarmBtn" onclick="showIgnoreModal()">忽略报警</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 处理报警模态框 -->
+    <div class="modal" id="handleAlarmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">处理报警</h3>
+                <button class="modal-close" onclick="closeModal('handleAlarmModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="handleAlarmId">
+                <div class="form-group">
+                    <label for="handleNote">处理备注</label>
+                    <textarea id="handleNote" class="form-control" rows="4" placeholder="请输入处理备注..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="closeModal('handleAlarmModal')">取消</button>
+                <button class="modal-btn success" onclick="handleAlarm()">确认处理</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 忽略报警模态框 -->
+    <div class="modal" id="ignoreAlarmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">忽略报警</h3>
+                <button class="modal-close" onclick="closeModal('ignoreAlarmModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="ignoreAlarmId">
+                <p>确定要忽略此报警吗？</p>
+                <div class="form-group">
+                    <label for="ignoreReason">忽略原因</label>
+                    <select id="ignoreReason" class="form-control">
+                        <option value="FALSE_ALARM">误报</option>
+                        <option value="TEST_ALARM">测试报警</option>
+                        <option value="DUPLICATE">重复报警</option>
+                        <option value="OTHER">其他原因</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ignoreNote">备注</label>
+                    <textarea id="ignoreNote" class="form-control" rows="3" placeholder="请输入备注..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="closeModal('ignoreAlarmModal')">取消</button>
+                <button class="modal-btn primary" onclick="ignoreAlarm()">确认忽略</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/alarm-management.js"></script>
+</body>
+</html>
