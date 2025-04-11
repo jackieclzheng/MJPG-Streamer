@@ -12,7 +12,7 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
     
     List<Device> findByStatus(Device.DeviceStatus status);
     
-    @Query("SELECT d FROM Device d JOIN d.accessibleDevices u WHERE u.id = ?1")
+    @Query("SELECT d FROM Device d JOIN d.users u WHERE u.id = ?1")
     List<Device> findByUserId(Long userId);
     
     List<Device> findByTypeAndStatus(Device.DeviceType type, Device.DeviceStatus status);

@@ -3,6 +3,7 @@ package com.security.system.entity;
 import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Data
 @Entity
@@ -59,6 +60,9 @@ public class Device {
     
     @Column
     private String motionDetectionConfig; // 移动侦测配置，JSON格式
+    
+    @ManyToMany(mappedBy = "accessibleDevices")
+    private Set<User> users; // 可访问此设备的用户
     
     public enum DeviceStatus {
         ONLINE, // 在线

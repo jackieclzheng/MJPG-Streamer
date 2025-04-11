@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频监控系统 - 设备管理</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/device-management.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">视频监控系统</a>
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a href="index.html" class="nav-link">控制台</a>
+            </li>
+            <li class="nav-item">
+                <a href="monitor.html" class="nav-link">实时监控</a>
+            </li>
+            <li class="nav-item">
+                <a href="playback.html" class="nav-link">录像回放</a>
+            </li>
+            <li class="nav-item">
+                <a href="device-management.html" class="nav-link active">设备管理</a>
+            </li>
+            <li class="nav-item">
+                <a href="alarm-management.html" class="nav-link">报警管理</a>
+            </li>
+            <li class="nav-item user-menu">
+                <div class="user-menu-toggle" onclick="toggleUserMenu()">
+                    <div class="user-avatar">A</div>
+                    <span>管理员</span>
+                </div>
+                <div class="user-dropdown" id="userDropdown">
+                    <a href="profile.html">个人信息</a>
+                    <a href="settings.html">系统设置</a>
+                    <a href="login.html">退出登录</a>
+                </div>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h1 class="page-title">设备管理</h1>
+            <button class="btn-add" onclick="showAddDeviceModal()">
+                <span>+</span>
+                <span>添加设备</span>
+            </button>
+        </div>
+
+        <!-- 搜索和过滤区域 -->
+        <div class="search-filter">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" id="deviceSearch" placeholder="搜索设备名称、IP地址...">
+            </div>
+            <div class="filter-group">
+                <select class="filter-select" id="typeFilter">
+                    <option value="">所有类型</option>
+                    <option value="USB">USB摄像头</option>
+                    <option value="RASPI">树莓派摄像头</option>
+                    <option value="IP">IP摄像头</option>
+                    <option value="RTSP">RTSP流摄像头</option>
+                </select>
+                <select class="filter-select" id="statusFilter">
+                    <option value="">所有状态</option>
+                    <option value="ONLINE">在线</option>
+                    <option value="OFFLINE">离线</option>
+                    <option value="ERROR">错误</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 设备卡片网格 -->
+        <div class="device-grid" id="deviceGrid">
+            <!-- 设备卡片将通过JavaScript动态加载 -->
+        </div>
+
+        <!-- 分页 -->
+        <div class="pagination" id="pagination">
+            <!-- 分页将通过JavaScript动态加载 -->
+        </div>
+    </div>
+
+    <!-- 添加设备模态框 -->
+    <div class="modal" id="addDeviceModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">添加设备</h3>
+                <button class="modal-close" onclick="closeModal('addDeviceModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addDeviceForm">
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="deviceName">设备名称</label>
+                                <input type="text" id="deviceName" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="deviceType">设备类型</label>
+                                <select id="deviceType" class="form-control" required>
+                                    <option value="">请选择类型</option>
+                                    <option value="USB">USB摄像头</option>
+                                    <option value="RASPI">树莓派摄像头</option>
+                                    <option value="IP">IP摄像头</option>
+                                    <option value="RTSP">RTSP流摄像头</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="networkDeviceFields" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="ipAddress">IP地址</label>
+                                    <input type="text" id="ipAddress" class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="port">端口</label>
+                                    <input type="number" id="port" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="streamUrl">流地址</label>
+                            <input type="text" id="streamUrl" class="form-control">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="username">用户名</label>
+                                    <input type="text" id="username" class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="password">密码</label>
+                                    <input type="password" id="password" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="usbDeviceFields" style="display: none;">
+                        <div class="form-group">
+                            <label for="devicePath">设备路径</label>
+                            <input type="text" id="devicePath" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="resolution">分辨率</label>
+                                <select id="resolution" class="form-control">
+                                    <option value="">默认</option>
+                                    <option value="640x480">640x480</option>
+                                    <option value="1280x720">1280x720</option>
+                                    <option value="1920x1080">1920x1080</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="frameRate">帧率</label>
+                                <select id="frameRate" class="form-control">
+                                    <option value="">默认</option>
+                                    <option value="15">15 fps</option>
+                                    <option value="25">25 fps</option>
+                                    <option value="30">30 fps</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">描述</label>
+                        <textarea id="description" class="form-control" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="closeModal('addDeviceModal')">取消</button>
+                <button class="modal-btn primary" onclick="addDevice()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑设备模态框 -->
+    <div class="modal" id="editDeviceModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">编辑设备</h3>
+                <button class="modal-close" onclick="closeModal('editDeviceModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editDeviceForm">
+                    <input type="hidden" id="editDeviceId">
+                    <!-- 表单内容与添加设备相同，但ID不同 -->
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="editDeviceName">设备名称</label>
+                                <input type="text" id="editDeviceName" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="editDeviceType">设备类型</label>
+                                <select id="editDeviceType" class="form-control" required disabled>
+                                    <option value="">请选择类型</option>
+                                    <option value="USB">USB摄像头</option>
+                                    <option value="RASPI">树莓派摄像头</option>
+                                    <option value="IP">IP摄像头</option>
+                                    <option value="RTSP">RTSP流摄像头</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="editNetworkDeviceFields">
+                        <div class="form-row">
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="editIpAddress">IP地址</label>
+                                    <input type="text" id="editIpAddress" class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="editPort">端口</label>
+                                    <input type="number" id="editPort" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="editStreamUrl">流地址</label>
+                            <input type="text" id="editStreamUrl" class="form-control">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="editUsername">用户名</label>
+                                    <input type="text" id="editUsername" class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="editPassword">密码</label>
+                                    <input type="password" id="editPassword" class="form-control" placeholder="不修改请留空">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="editUsbDeviceFields">
+                        <div class="form-group">
+                            <label for="editDevicePath">设备路径</label>
+                            <input type="text" id="editDevicePath" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="editResolution">分辨率</label>
+                                <select id="editResolution" class="form-control">
+                                    <option value="">默认</option>
+                                    <option value="640x480">640x480</option>
+                                    <option value="1280x720">1280x720</option>
+                                    <option value="1920x1080">1920x1080</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label for="editFrameRate">帧率</label>
+                                <select id="editFrameRate" class="form-control">
+                                    <option value="">默认</option>
+                                    <option value="15">15 fps</option>
+                                    <option value="25">25 fps</option>
+                                    <option value="30">30 fps</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editDescription">描述</label>
+                        <textarea id="editDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="closeModal('editDeviceModal')">取消</button>
+                <button class="modal-btn primary" onclick="updateDevice()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal" id="deleteConfirmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">确认删除</h3>
+                <button class="modal-close" onclick="closeModal('deleteConfirmModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>确定要删除此设备吗？此操作不可撤销。</p>
+                <input type="hidden" id="deleteDeviceId">
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="closeModal('deleteConfirmModal')">取消</button>
+                <button class="modal-btn primary" onclick="deleteDevice()">确定删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/device-management.js"></script>
+</body>
+</html>

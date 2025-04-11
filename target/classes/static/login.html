@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频监控系统 - 登录</title>
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h2>视频监控系统</h2>
+            <p>请登录以继续访问</p>
+        </div>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="remember-me">
+                <input type="checkbox" id="rememberMe" name="rememberMe">
+                <label for="rememberMe">记住我</label>
+            </div>
+            <button type="submit" class="btn-login">登录</button>
+            <div id="errorMessage" class="error-message">
+                用户名或密码错误，请重试。
+            </div>
+        </form>
+        <div class="register-link">
+            还没有账号？<a href="#">联系管理员</a>
+        </div>
+    </div>
+
+    <script src="js/login.js"></script>
+</body>
+</html>

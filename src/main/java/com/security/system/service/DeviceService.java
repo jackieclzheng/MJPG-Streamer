@@ -4,6 +4,7 @@ import com.security.system.entity.Device;
 import com.security.system.entity.SystemLog;
 import com.security.system.repository.DeviceRepository;
 import com.security.system.exception.BusinessException;
+import com.security.system.dto.DeviceDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
