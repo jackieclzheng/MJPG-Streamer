@@ -1,5 +1,7 @@
 package com.security.system.entity;
 
+import com.security.system.enums.UserRole;
+import com.security.system.enums.UserStatus;
 import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -14,32 +16,34 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(unique = true, nullable = false, length = 50)
+    @Column(unique = true, nullable = false)
     private String username;
     
     @Column(nullable = false)
     private String password;
     
-    @Column(length = 50)
-    private String nickname;
-    
-    @Column(length = 100)
-    private String email;
-    
-    @Column(length = 20)
-    private String phone;
-    
-    @Enumerated(EnumType.STRING)  // 确保使用字符串存储
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private UserRole role = UserRole.USER;
+    private UserRole role;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserStatus status = UserStatus.ACTIVE;
     
     @Column(nullable = false)
     private boolean enabled = true;
     
-    @Column(nullable = false)
-    private LocalDateTime createTime = LocalDateTime.now();
+    @Column(unique = true)
+    private String email;
     
-    @Column
+    private String phone;
+    
+    private String nickname;
+    
+    @Column(name = "create_time")
+    private LocalDateTime createTime;
+    
+    @Column(name = "last_login_time")
     private LocalDateTime lastLoginTime;
     
     @ManyToMany(fetch = FetchType.EAGER)
@@ -49,14 +53,4 @@ public class User {
         inverseJoinColumns = @JoinColumn(name = "device_id")
     )
     private Set<Device> accessibleDevices;
-    
-    public enum UserRole {
-        ADMIN,           // 普通枚举值
-        USER;
-
-        @Override
-        public String toString() {
-            return name();
-        }
-    }
 }

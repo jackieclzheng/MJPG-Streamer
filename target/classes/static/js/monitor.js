@@ -18,6 +18,50 @@ let videoStream = null;
 let macVideoStream = null;
 let activeVideoPanel = null;
 
+// 摄像头工具类
+const CameraUtil = {
+    // 检测当前平台
+    getPlatform() {
+        const platform = navigator.platform.toLowerCase();
+        if (platform.includes('mac')) return 'mac';
+        if (platform.includes('win')) return 'windows';
+        if (platform.includes('linux')) return 'linux';
+        return 'unknown';
+    },
+
+    // 获取摄像头标签
+    getCameraLabel() {
+        const platform = this.getPlatform();
+        switch (platform) {
+            case 'mac': return 'FaceTime HD Camera';
+            case 'windows': return '系统摄像头';
+            case 'linux': return 'USB Camera';
+            default: return '本地摄像头';
+        }
+    },
+
+    // 获取摄像头约束条件
+    async getCameraConstraints() {
+        // 获取可用的视频设备
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+        if (videoDevices.length === 0) {
+            throw new Error('未找到可用的摄像头设备');
+        }
+
+        // 默认使用第一个摄像头
+        return {
+            video: {
+                deviceId: videoDevices[0].deviceId,
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 }
+            }
+        };
+    }
+};
+
 // 页面加载完成后的初始化函数
 document.addEventListener('DOMContentLoaded', async function() {
     // 检查认证状态
@@ -55,18 +99,31 @@ async function initializeVideoGrid() {
 function createVideoPanel(index) {
     const panel = document.createElement('div');
     panel.className = 'video-panel';
-    panel.innerHTML = `
-        <video id="video-${index}" autoplay playsinline></video>
-        <div class="video-label">Mac摄像头</div>
-        <div class="video-controls-overlay">
-            <button class="video-btn" onclick="takeSnapshot(${index})">
-                <i class="fas fa-camera"></i>
-            </button>
-            <button class="video-btn record" onclick="toggleRecording(${index})">
-                <i class="fas fa-circle"></i>
-            </button>
-        </div>
+    
+    const video = document.createElement('video');
+    video.id = `video-${index}`;
+    video.autoplay = true;
+    video.playsInline = true;
+    
+    const label = document.createElement('div');
+    label.className = 'video-label';
+    label.textContent = '正在加载...';
+    
+    const controls = document.createElement('div');
+    controls.className = 'video-controls-overlay';
+    controls.innerHTML = `
+        <button class="video-btn" onclick="takeSnapshot(${index})">
+            <i class="fas fa-camera"></i>
+        </button>
+        <button class="video-btn record" onclick="toggleRecording(${index})">
+            <i class="fas fa-circle"></i>
+        </button>
     `;
+    
+    panel.appendChild(video);
+    panel.appendChild(label);
+    panel.appendChild(controls);
+    
     return panel;
 }
 
@@ -125,17 +182,25 @@ function setupEventListeners() {
 // 初始化摄像头
 async function initializeCamera(videoElement) {
     try {
-        videoStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                width: 640,
-                height: 480
-            }
-        });
-        videoElement.srcObject = videoStream;
-        console.log('Mac摄像头已启动');
+        console.log('正在初始化摄像头...');
+        const constraints = await CameraUtil.getCameraConstraints();
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        videoElement.srcObject = stream;
+        videoElement.play();
+
+        // 更新摄像头标签
+        const label = videoElement.parentElement.querySelector('.video-label');
+        if (label) {
+            label.textContent = CameraUtil.getCameraLabel();
+        }
+
+        console.log('摄像头初始化成功');
+        return stream;
     } catch (error) {
-        console.error('摄像头访问失败:', error);
-        showError('无法访问Mac摄像头: ' + error.message);
+        console.error('摄像头初始化失败:', error);
+        showError(`摄像头初始化失败: ${error.message}`);
+        throw error;
     }
 }
 
@@ -827,8 +892,11 @@ document.addEventListener('click', function(event) {
 
 // 显示错误消息
 function showError(message) {
-    // 可以根据需要实现错误提示UI
-    alert(message);
+    const toast = document.createElement('div');
+    toast.className = 'toast error';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 
 // 页面加载完成后初始化

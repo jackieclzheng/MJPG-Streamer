@@ -8,12 +8,16 @@ import com.security.system.dto.DeviceDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class DeviceService {
+    
+    private final Logger logger = LoggerFactory.getLogger(DeviceService.class);
     
     @Autowired
     private DeviceRepository deviceRepository;
@@ -187,14 +191,12 @@ public class DeviceService {
             device.setLastOnlineTime(LocalDateTime.now());
             deviceRepository.save(device);
             
-            // 记录系统日志
             systemLogService.addLog(null, SystemLog.LogType.DEVICE_OPERATION, 
                     "启动设备: " + device.getName(), "启动成功");
         } else {
             device.setStatus(Device.DeviceStatus.ERROR);
             deviceRepository.save(device);
             
-            // 记录系统日志
             systemLogService.addLog(null, SystemLog.LogType.DEVICE_OPERATION, 
                     "启动设备: " + device.getName(), "启动失败");
             
@@ -211,7 +213,7 @@ public class DeviceService {
                 .orElseThrow(() -> new BusinessException("设备不存在"));
         
         // 停止MJPG-Streamer服务
-        boolean success = mjpgStreamerService.stopStreaming(device);
+        boolean success = mjpgStreamerService.stopStreaming(id);  // 修改这里，传入设备ID
         
         if (success) {
             device.setStatus(Device.DeviceStatus.OFFLINE);
@@ -257,6 +259,36 @@ public class DeviceService {
                     "重启设备: " + device.getName(), "重启失败");
             
             throw new BusinessException("设备重启失败");
+        }
+    }
+    
+    public Device addDevice(Device device) {
+        try {
+            // 设置默认值
+            device.setCreateTime(LocalDateTime.now());
+            device.setStatus(Device.DeviceStatus.OFFLINE);
+            
+            // 根据设备类型设置默认配置
+            if (device.getType() == Device.DeviceType.USB || 
+                device.getType() == Device.DeviceType.RASPI) {
+                if (device.getDevicePath() == null) {
+                    device.setDevicePath("/dev/video0");
+                }
+                if (device.getResolution() == null) {
+                    device.setResolution("1280x720");
+                }
+                if (device.getFramerate() == null) {
+                    device.setFramerate(30);
+                }
+            }
+            
+            Device savedDevice = deviceRepository.save(device);
+            logger.info("成功添加设备: {}", savedDevice.getName());
+            return savedDevice;
+            
+        } catch (Exception e) {
+            logger.error("添加设备失败: {}", e.getMessage());
+            throw new RuntimeException("添加设备失败", e);
         }
     }
 }

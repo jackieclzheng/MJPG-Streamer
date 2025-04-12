@@ -413,62 +413,53 @@ function toggleEditDeviceFields(deviceType) {
 }
 
 // 添加设备
-function addDevice() {
-    const deviceName = document.getElementById('deviceName').value;
-    const deviceType = document.getElementById('deviceType').value;
-    
-    if (!deviceName || !deviceType) {
-        alert('请填写必填字段');
-        return;
-    }
-    
-    // 构建设备数据
-    const deviceData = {
-        name: deviceName,
-        type: deviceType,
-        description: document.getElementById('description').value,
-        resolution: document.getElementById('resolution').value,
-        frameRate: document.getElementById('frameRate').value
-    };
-    
-    // 根据设备类型添加特定字段
-    if (deviceType === 'IP' || deviceType === 'RTSP') {
-        deviceData.ip = document.getElementById('ipAddress').value;
-        deviceData.port = document.getElementById('port').value;
-        deviceData.streamUrl = document.getElementById('streamUrl').value;
-        deviceData.username = document.getElementById('username').value;
-        deviceData.password = document.getElementById('password').value;
-    } else if (deviceType === 'USB' || deviceType === 'RASPI') {
-        deviceData.devicePath = document.getElementById('devicePath').value;
-    }
-    
-    // 发送请求
-    fetch('/api/device/add', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-        },
-        body: JSON.stringify(deviceData)
-    })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
+async function addDevice() {
+    try {
+        const formData = {
+            name: document.getElementById('deviceName').value,
+            type: document.getElementById('deviceType').value,
+            status: 'OFFLINE',
+            createTime: new Date().toISOString()
+        };
+
+        // 根据设备类型添加额外字段
+        if (formData.type === 'IP' || formData.type === 'RTSP') {
+            formData.ipAddress = document.getElementById('ipAddress').value;
+            formData.port = parseInt(document.getElementById('port').value);
+            formData.username = document.getElementById('username').value;
+            formData.password = document.getElementById('password').value;
         } else {
-            throw new Error('添加设备失败');
+            formData.devicePath = document.getElementById('devicePath').value || '/dev/video0';
         }
-    })
-    .then(data => {
+
+        console.log('添加设备:', formData);
+
+        const response = await fetch('/api/devices', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('设备添加成功:', result);
+        
         // 关闭模态框
         closeModal('addDeviceModal');
         
-        // 重新加载设备列表
+        // 刷新设备列表
         loadDevices();
-    })
-    .catch(error => {
-        console.error('添加设备错误:', error);
-        alert('添加设备失败: ' + error.message);
-    });
+        
+        showToast('设备添加成功');
+    } catch (error) {
+        console.error('添加设备失败:', error);
+        showToast('添加设备失败: ' + error.message, 'error');
+    }
 }
 
 // 更新设备
@@ -633,5 +624,38 @@ document.addEventListener('click', function(event) {
     
     if (!userMenu.contains(event.target) && dropdown.classList.contains('show')) {
         dropdown.classList.remove('show');
+    }
+});
+
+// 显示提示信息
+function showToast(message, type = 'success') {
+    // 创建提示元素
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    // 添加到页面
+    document.body.appendChild(toast);
+    
+    // 3秒后移除
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// 根据设备类型显示/隐藏相应字段
+document.getElementById('deviceType').addEventListener('change', function() {
+    const networkFields = document.getElementById('networkDeviceFields');
+    const usbFields = document.getElementById('usbDeviceFields');
+    
+    if (this.value === 'IP' || this.value === 'RTSP') {
+        networkFields.style.display = 'block';
+        usbFields.style.display = 'none';
+    } else if (this.value === 'USB' || this.value === 'RASPI') {
+        networkFields.style.display = 'none';
+        usbFields.style.display = 'block';
+    } else {
+        networkFields.style.display = 'none';
+        usbFields.style.display = 'none';
     }
 });

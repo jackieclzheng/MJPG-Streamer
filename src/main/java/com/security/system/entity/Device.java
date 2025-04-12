@@ -1,6 +1,8 @@
 package com.security.system.entity;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -8,6 +10,8 @@ import java.util.Set;
 @Data
 @Entity
 @Table(name = "devices")
+@NoArgsConstructor
+@AllArgsConstructor
 public class Device {
     
     @Id
@@ -36,7 +40,7 @@ public class Device {
     private String password; // 设备认证密码
     
     @Column(length = 20)
-    private String resolution = "640x480"; // 分辨率
+    private String resolution = "1280x720"; // 分辨率
     
     @Column
     private Integer framerate = 30; // 帧率
@@ -63,6 +67,10 @@ public class Device {
     
     @ManyToMany(mappedBy = "accessibleDevices")
     private Set<User> users; // 可访问此设备的用户
+    
+    // 添加 streamUrl 字段
+    @Column(name = "stream_url")
+    private String streamUrl = "/stream";
     
     public enum DeviceStatus {
         ONLINE, // 在线

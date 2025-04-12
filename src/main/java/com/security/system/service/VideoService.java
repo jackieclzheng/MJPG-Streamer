@@ -5,6 +5,7 @@ import com.security.system.entity.Record;
 import com.security.system.exception.BusinessException;
 import com.security.system.repository.DeviceRepository;
 import com.security.system.util.MacCameraUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -23,24 +24,50 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
 
 @Service
+@Slf4j
 public class VideoService {
-
-    @Autowired
-    private DeviceRepository deviceRepository;  // 保留这一个注入
+    
+    private final DeviceService deviceService;
+    private final MjpgStreamerService mjpgStreamerService;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final DeviceRepository deviceRepository;
+    private final RecordService recordService;
+    private final WebSocketService webSocketService;
+    
+    @Value("${video.frame.quality:0.8}")
+    private float frameQuality;
+    
+    // 记录活跃的录制任务
+    private final Map<Long, Record> activeRecordings = new ConcurrentHashMap<>();
     
     @Autowired
-    private MjpgStreamerService mjpgStreamerService;
+    public VideoService(
+            DeviceService deviceService,
+            MjpgStreamerService mjpgStreamerService,
+            SimpMessagingTemplate messagingTemplate,
+            DeviceRepository deviceRepository,
+            RecordService recordService,
+            WebSocketService webSocketService) {
+        this.deviceService = deviceService;
+        this.mjpgStreamerService = mjpgStreamerService;
+        this.messagingTemplate = messagingTemplate;
+        this.deviceRepository = deviceRepository;
+        this.recordService = recordService;
+        this.webSocketService = webSocketService;
+    }
     
-    @Autowired
-    private RecordService recordService;
-    
-    @Autowired
-    private WebSocketService webSocketService;
-    
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+    private List<Long> getActiveDevices() {
+        return deviceService.findOnlineDevices()
+                .stream()
+                .map(Device::getId)
+                .collect(Collectors.toList());
+    }
     
     @Value("${video.storage.path:/data/recordings}")
     private String storageBasePath;
@@ -206,13 +233,6 @@ public class VideoService {
         }
     }
 
-    private List<Long> getActiveDevices() {
-        return deviceRepository.findByStatus(Device.DeviceStatus.ONLINE)
-                .stream()
-                .map(Device::getId)
-                .collect(Collectors.toList());
-    }
-
     public void startCamera(Long deviceId) throws IOException {
         Device device = getDevice(deviceId);
         
@@ -227,5 +247,61 @@ public class VideoService {
         // 更新设备状态
         device.setStatus(Device.DeviceStatus.ONLINE);
         deviceRepository.save(device);
+    }
+
+    public void pushVideoFrames(Long deviceId) {
+        try {
+            byte[] frame = mjpgStreamerService.getSnapshot(deviceId);
+            // 处理视频帧
+            processVideoFrame(deviceId, frame);
+        } catch (IllegalStateException e) {
+            log.warn("设备 {} 未启动视频流服务", deviceId);
+            // 尝试自动启动服务
+            tryStartStreaming(deviceId);
+        } catch (Exception e) {
+            log.error("推送视频帧失败，设备ID: " + deviceId, e);
+        }
+    }
+
+    private void tryStartStreaming(Long deviceId) {
+        try {
+            Device device = deviceService.findById(deviceId)
+                .orElseThrow(() -> new IllegalArgumentException("设备不存在"));
+            mjpgStreamerService.startStreaming(device);
+        } catch (Exception e) {
+            log.error("自动启动视频流失败，设备ID: " + deviceId, e);
+        }
+    }
+
+    /**
+     * 处理视频帧
+     * @param deviceId 设备ID
+     * @param frame 视频帧数据
+     */
+    private void processVideoFrame(Long deviceId, byte[] frame) {
+        try {
+            if (frame == null || frame.length == 0) {
+                log.warn("设备 {} 的视频帧为空", deviceId);
+                return;
+            }
+
+            // 发送帧数据到WebSocket客户端
+            messagingTemplate.convertAndSend(
+                "/topic/video/" + deviceId, 
+                frame
+            );
+
+            // 如果正在录制，保存帧数据
+            Record activeRecord = activeRecordings.get(deviceId);
+            if (activeRecord != null) {
+                try (FileOutputStream fos = new FileOutputStream(
+                        activeRecord.getFilePath(), true)) {
+                    fos.write(frame);
+                    fos.flush();
+                }
+            }
+        } catch (IOException e) {
+            log.error("处理视频帧失败，设备ID: {}", deviceId, e);
+        }
     }
 }

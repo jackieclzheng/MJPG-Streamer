@@ -388,6 +388,21 @@
     border-color: #3498db;
 }
 
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border-radius: 4px;
+    z-index: 1000;
+}
+
+.toast.error {
+    background: rgba(231, 76, 60, 0.9);
+}
+
 /* 响应式调整 */
 @media (max-width: 992px) {
     .container {

@@ -1,8 +1,14 @@
 FROM ubuntu:20.04
+# FROM mirrors.ustc.edu.cn/ubuntu:20.04
 
 # 设置环境变量避免交互式配置
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Shanghai
+
+# 替换为国内镜像源
+RUN sed -i 's/http:\/\/archive.ubuntu.com\/ubuntu\//http:\/\/mirrors.aliyun.com\/ubuntu\//g' /etc/apt/sources.list && \
+    sed -i 's/http:\/\/security.ubuntu.com\/ubuntu\//http:\/\/mirrors.aliyun.com\/ubuntu\//g' /etc/apt/sources.list
+
 
 # 安装必要的构建工具和依赖
 RUN apt-get update && apt-get install -y \
