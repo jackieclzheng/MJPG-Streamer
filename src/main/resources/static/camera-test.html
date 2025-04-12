@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>摄像头测试</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .camera-preview {
+            width: 640px;
+            height: 480px;
+            border: 1px solid #ccc;
+            margin: 20px 0;
+        }
+        .info-panel {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>摄像头测试</h1>
+        <div class="camera-preview">
+            <video id="video" width="640" height="480" autoplay></video>
+        </div>
+        <div class="info-panel" id="camera-info">
+            加载摄像头信息...
+        </div>
+        <button onclick="startCamera()">开启摄像头</button>
+        <button onclick="stopCamera()">关闭摄像头</button>
+    </div>
+
+    <script>
+        let stream = null;
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: {
+                        width: 640,
+                        height: 480
+                    }
+                });
+                document.getElementById('video').srcObject = stream;
+            } catch (err) {
+                alert('访问摄像头失败: ' + err.message);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                document.getElementById('video').srcObject = null;
+            }
+        }
+
+        // 获取摄像头信息
+        fetch('/api/record/camera/test')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('camera-info').innerText = 
+                    JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('camera-info').innerText = 
+                    '获取摄像头信息失败: ' + error;
+            });
+    </script>
+</body>
+</html>

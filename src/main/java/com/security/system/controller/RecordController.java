@@ -1,7 +1,12 @@
 package com.security.system.controller;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -67,5 +72,38 @@ public class RecordController {
     public ResponseEntity<Void> deleteRecord(@PathVariable Long id) {
         recordService.deleteRecord(id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/camera/test")
+    public ResponseEntity<Map<String, Object>> testCamera() {
+        try {
+            Process process = Runtime.getRuntime().exec("system_profiler SPCameraDataType");
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))) {
+                
+                StringBuilder output = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "success");
+                response.put("camera_info", output.toString());
+                response.put("device_id", "DJH5296WCWXG1HPA0"); // 您系统中的摄像头ID
+                
+                return ResponseEntity.ok(response);
+            }
+        } catch (IOException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", "检查摄像头失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    @GetMapping("/camera/view")
+    public String cameraView() {
+        return "camera-view.html";
     }
 }

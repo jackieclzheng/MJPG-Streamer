@@ -76,4 +76,23 @@ public class Device {
         IP, // IP摄像头
         RTSP // RTSP流摄像头
     }
+    
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+    
+    public String getIpAddress() {
+        return ipAddress;
+    }
+    
+    public Integer getPort() {
+        return port;
+    }
+    
+    public String getDevicePath() {
+        return devicePath;
+    }
+    
+    // ...other getters and setters...
 }

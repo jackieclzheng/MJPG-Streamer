@@ -4,9 +4,14 @@ import com.security.system.entity.Device;
 import com.security.system.entity.Record;
 import com.security.system.exception.BusinessException;
 import com.security.system.repository.DeviceRepository;
+import com.security.system.util.MacCameraUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -14,14 +19,16 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class VideoService {
 
     @Autowired
-    private DeviceRepository deviceRepository;
+    private DeviceRepository deviceRepository;  // 保留这一个注入
     
     @Autowired
     private MjpgStreamerService mjpgStreamerService;
@@ -32,11 +39,21 @@ public class VideoService {
     @Autowired
     private WebSocketService webSocketService;
     
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+    
     @Value("${video.storage.path:/data/recordings}")
     private String storageBasePath;
     
+    private static final Logger logger = LoggerFactory.getLogger(VideoService.class);
+    
     // 当前正在录制的设备
     private final Map<Long, Long> recordingDevices = new ConcurrentHashMap<>();
+
+    public Device getDevice(Long deviceId) {
+        return deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new RuntimeException("设备未找到: " + deviceId));
+    }
     
     /**
      * 转发视频流
@@ -168,5 +185,47 @@ public class VideoService {
         webSocketService.sendRecordingStopped(device, updatedRecord);
         
         return updatedRecord;
+    }
+    
+    // 定时推送视频帧
+    @Scheduled(fixedRate = 33) // 约30fps
+    public void pushVideoFrames() {
+        // 获取所有活跃的设备连接
+        List<Long> activeDevices = getActiveDevices();
+        
+        for (Long deviceId : activeDevices) {
+            try {
+                byte[] frame = getSnapshot(deviceId);
+                messagingTemplate.convertAndSend(
+                    "/topic/video/" + deviceId,
+                    frame
+                );
+            } catch (Exception e) {
+                logger.error("推送视频帧失败: deviceId=" + deviceId, e);
+            }
+        }
+    }
+
+    private List<Long> getActiveDevices() {
+        return deviceRepository.findByStatus(Device.DeviceStatus.ONLINE)
+                .stream()
+                .map(Device::getId)
+                .collect(Collectors.toList());
+    }
+
+    public void startCamera(Long deviceId) throws IOException {
+        Device device = getDevice(deviceId);
+        
+        // 检查摄像头是否可用
+        if (!MacCameraUtil.isCameraAvailable()) {
+            throw new BusinessException("摄像头不可用");
+        }
+        
+        // 启动摄像头流
+        mjpgStreamerService.startStreaming(device);
+        
+        // 更新设备状态
+        device.setStatus(Device.DeviceStatus.ONLINE);
+        deviceRepository.save(device);
     }
 }

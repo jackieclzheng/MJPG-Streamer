@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>摄像头预览</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .video-container {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .info-panel {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            text-align: left;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>摄像头预览</h1>
+        <div class="video-container">
+            <video id="videoElement" width="640" height="480" autoplay></video>
+        </div>
+        <div>
+            <button onclick="startCamera()">开启摄像头</button>
+            <button onclick="stopCamera()">关闭摄像头</button>
+        </div>
+        <div class="info-panel" id="infoPanel">
+            正在加载摄像头信息...
+        </div>
+    </div>
+
+    <script>
+        let videoStream = null;
+
+        // 开启摄像头
+        async function startCamera() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: 640,
+                        height: 480
+                    }
+                });
+                const videoElement = document.getElementById('videoElement');
+                videoElement.srcObject = videoStream;
+                console.log('摄像头已开启');
+            } catch (error) {
+                console.error('访问摄像头失败:', error);
+                alert('无法访问摄像头: ' + error.message);
+            }
+        }
+
+        // 关闭摄像头
+        function stopCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                document.getElementById('videoElement').srcObject = null;
+                console.log('摄像头已关闭');
+            }
+        }
+
+        // 获取摄像头信息
+        fetch('/api/record/camera/test')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('infoPanel').innerHTML = `
+                    <h3>摄像头信息:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                console.log('摄像头信息已加载');
+            })
+            .catch(error => {
+                document.getElementById('infoPanel').innerHTML = 
+                    `<p style="color: red">获取摄像头信息失败: ${error.message}</p>`;
+                console.error('获取摄像头信息失败:', error);
+            });
+    </script>
+</body>
+</html>

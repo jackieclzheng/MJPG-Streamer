@@ -83,69 +83,41 @@ public class MjpgStreamerService {
         if (device == null) {
             return false;
         }
-        
-        Long deviceId = device.getId();
-        
-        // 检查是否已经运行
-        if (runningProcesses.containsKey(deviceId)) {
-            log.info("设备{}的MJPG-Streamer服务已经在运行", deviceId);
-            return true;
-        }
-        
-        // 分配端口
-        int port = allocatePort();
-        if (port == -1) {
-            log.error("没有可用的端口");
-            return false;
-        }
-        
+
         try {
-            // 构建启动命令
-            List<String> command = buildCommand(device, port);
-            
-            // 启动进程
-            ProcessBuilder processBuilder = new ProcessBuilder(command);
-            processBuilder.redirectErrorStream(true);
-            
-            Process process = processBuilder.start();
-            log.info("已启动设备{}的MJPG-Streamer服务，端口: {}", deviceId, port);
-            
-            // 启动线程读取进程输出
-            Thread outputThread = new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        log.debug("MJPG-Streamer [设备{}]: {}", deviceId, line);
-                    }
-                } catch (IOException e) {
-                    log.error("读取MJPG-Streamer输出失败: {}", e.getMessage());
-                }
-            });
-            outputThread.setDaemon(true);
-            outputThread.start();
-            
-            // 检查进程是否立即退出
-            if (!process.isAlive()) {
-                int exitValue = process.exitValue();
-                log.error("设备{}的MJPG-Streamer启动失败，退出代码: {}", deviceId, exitValue);
-                releasePort(port);
-                return false;
+            // 分配端口
+            int port = allocatePort();
+            if (port == -1) {
+                throw new RuntimeException("没有可用端口");
             }
-            
+
+            // MJPG-Streamer命令
+            List<String> command = new ArrayList<>();
+            command.add(mjpgStreamerBinaryPath);
+            command.add("-i");
+            command.add("input_uvc.so -d " + device.getDevicePath() + 
+                       " -r " + device.getResolution() + 
+                       " -f " + device.getFramerate());
+            command.add("-o");
+            command.add("output_http.so -p " + port + " -w " + mjpgStreamerWwwPath);
+
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            log.info("已启动 MJPG-Streamer - 设备ID: {}, 端口: {}", device.getId(), port);
+
             // 保存进程信息
-            runningProcesses.put(deviceId, new ProcessInfo(process, port));
-            
+            runningProcesses.put(device.getId(), new ProcessInfo(process, port));
+
             // 更新设备状态
             device.setStatus(Device.DeviceStatus.ONLINE);
+            device.setPort(port);
             deviceRepository.save(device);
-            
-            // 通知设备状态更新
-            webSocketService.sendDeviceStatusUpdate(device);
-            
+
             return true;
         } catch (Exception e) {
-            log.error("启动设备{}的MJPG-Streamer服务失败: {}", deviceId, e.getMessage());
-            releasePort(port);
+            log.error("启动设备{}的MJPG-Streamer失败: {}", device.getId(), e.getMessage());
             return false;
         }
     }
@@ -411,7 +383,7 @@ public class MjpgStreamerService {
                 return portRangeStart + i;
             }
         }
-        return -1; // 没有可用端口
+        return -1; // 沧有可用端口
     }
     
     /**
@@ -441,6 +413,33 @@ public class MjpgStreamerService {
         
         public int getPort() {
             return port;
+        }
+    }
+
+    @Value("${mjpg-streamer.binary-path}")
+    private String mjpgStreamerPath;
+    
+    public byte[] getFrame(String streamUrl) throws IOException {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(streamUrl);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            
+            try (InputStream in = conn.getInputStream();
+                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                }
+                return out.toByteArray();
+            }
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
     }
 }

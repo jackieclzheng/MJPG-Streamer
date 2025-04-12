@@ -14,52 +14,269 @@ let selectedDevice = null;
 let currentLayout = 4;
 let isRecording = false;
 let activeDevices = [];
+let videoStream = null;
+let macVideoStream = null;
+let activeVideoPanel = null;
 
-// 初始化页面
-document.addEventListener('DOMContentLoaded', function() {
+// 页面加载完成后的初始化函数
+document.addEventListener('DOMContentLoaded', async function() {
     // 检查认证状态
     if (!checkAuth()) return;
     
-    // 加载设备列表
-    loadDevices();
-    
-    // 设置布局按钮事件
+    try {
+        await initializeVideoGrid();
+        setupEventListeners();
+    } catch (error) {
+        console.error('初始化失败:', error);
+        showError('初始化失败: ' + error.message);
+    }
+});
+
+async function initializeVideoGrid() {
+    const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) {
+        throw new Error('找不到视频网格元素');
+    }
+
+    // 创建并添加Mac摄像头面板
+    const macPanel = createVideoPanel(0);
+    videoGrid.appendChild(macPanel);
+    activeVideoPanel = macPanel;
+
+    // 启动Mac摄像头
+    await startMacCamera(macPanel.querySelector('video'));
+
+    // 添加其他空面板
+    for (let i = 1; i < 4; i++) {
+        videoGrid.appendChild(createEmptyPanel(i));
+    }
+}
+
+function createVideoPanel(index) {
+    const panel = document.createElement('div');
+    panel.className = 'video-panel';
+    panel.innerHTML = `
+        <video id="video-${index}" autoplay playsinline></video>
+        <div class="video-label">Mac摄像头</div>
+        <div class="video-controls-overlay">
+            <button class="video-btn" onclick="takeSnapshot(${index})">
+                <i class="fas fa-camera"></i>
+            </button>
+            <button class="video-btn record" onclick="toggleRecording(${index})">
+                <i class="fas fa-circle"></i>
+            </button>
+        </div>
+    `;
+    return panel;
+}
+
+function createEmptyPanel(index) {
+    const panel = document.createElement('div');
+    panel.className = 'video-panel empty';
+    panel.innerHTML = `
+        <div class="empty-panel">
+            <i class="fas fa-video-slash"></i>
+            <span>未连接</span>
+        </div>
+    `;
+    return panel;
+}
+
+async function startMacCamera(videoElement) {
+    try {
+        if (macVideoStream) {
+            macVideoStream.getTracks().forEach(track => track.stop());
+        }
+
+        macVideoStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        });
+
+        videoElement.srcObject = macVideoStream;
+        await videoElement.play();
+        console.log('Mac摄像头已启动');
+    } catch (error) {
+        console.error('启动Mac摄像头失败:', error);
+        throw error;
+    }
+}
+
+function setupEventListeners() {
+    // 布局切换按钮
     document.querySelectorAll('.layout-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const layout = parseInt(this.getAttribute('data-layout'));
-            setVideoLayout(layout);
-            
-            // 更新按钮状态
+        btn.addEventListener('click', function(e) {
+            e.preventDefault(); // 阻止默认行为
             document.querySelectorAll('.layout-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
         });
     });
-    
-    // 设置筛选按钮事件
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const filter = this.getAttribute('data-filter');
-            filterDevices(filter);
-            
-            // 更新按钮状态
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
+
+    // 拍照按钮
+    document.getElementById('snapshotBtn').addEventListener('click', () => {
+        if (activeVideoPanel) {
+            takeSnapshot(0);
+        }
+    });
+}
+
+// 初始化摄像头
+async function initializeCamera(videoElement) {
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: 640,
+                height: 480
+            }
         });
-    });
+        videoElement.srcObject = videoStream;
+        console.log('Mac摄像头已启动');
+    } catch (error) {
+        console.error('摄像头访问失败:', error);
+        showError('无法访问Mac摄像头: ' + error.message);
+    }
+}
+
+// 初始化视频网格
+async function initVideoGrid() {
+    const videoGrid = document.getElementById('videoGrid');
     
-    // 设置搜索框事件
-    document.querySelector('.device-search').addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        searchDevices(searchTerm);
-    });
+    // 创建第一个视频面板（Mac摄像头）
+    const macPanel = createVideoPanel(0, 'Mac摄像头');
+    videoGrid.appendChild(macPanel);
     
-    // 设置操作按钮事件
-    document.getElementById('snapshotBtn').addEventListener('click', captureSnapshot);
-    document.getElementById('recordBtn').addEventListener('click', toggleRecording);
-    document.getElementById('alarmBtn').addEventListener('click', showAlarmModal);
+    // 初始化Mac摄像头
+    await initializeMacCamera(macPanel.querySelector('video'));
     
-    // 定时刷新视频流（每分钟刷新一次，防止流断开）
-    setInterval(refreshVideoStreams, 60000);
+    // 创建其他三个视频面板
+    for (let i = 1; i < 4; i++) {
+        const panel = createVideoPanel(i, `摄像头 ${i}`);
+        videoGrid.appendChild(panel);
+    }
+}
+
+// 创建视频面板
+function createVideoPanel(index, label) {
+    const panel = document.createElement('div');
+    panel.className = 'video-panel';
+    
+    const video = document.createElement('video');
+    video.id = `video-${index}`;
+    video.autoplay = true;
+    video.playsInline = true;
+    
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'video-label';
+    labelDiv.textContent = label;
+    
+    const controls = document.createElement('div');
+    controls.className = 'video-controls-overlay';
+    controls.innerHTML = `
+        <button class="video-btn" onclick="takeSnapshot(${index})">
+            <i class="fas fa-camera"></i>
+        </button>
+    `;
+    
+    panel.appendChild(video);
+    panel.appendChild(labelDiv);
+    panel.appendChild(controls);
+    
+    return panel;
+}
+
+// 初始化Mac摄像头
+async function initializeMacCamera(videoElement) {
+    try {
+        macVideoStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: 1280,
+                height: 720
+            }
+        });
+        videoElement.srcObject = macVideoStream;
+        console.log('Mac摄像头已启动');
+    } catch (error) {
+        console.error('摄像头访问失败:', error);
+        showError(`无法访问Mac摄像头: ${error.message}`);
+    }
+}
+
+// 初始化视频网格
+function initializeVideoGrid() {
+    const videoGrid = document.getElementById('videoGrid');
+    videoGrid.innerHTML = ''; // 清空现有内容
+
+    // 创建4个视频面板
+    for (let i = 0; i < 4; i++) {
+        const videoPanel = document.createElement('div');
+        videoPanel.className = 'video-panel';
+        
+        const video = document.createElement('video');
+        video.id = `video-${i}`;
+        video.autoplay = true;
+        video.playsInline = true;
+        
+        // 第一个面板使用Mac摄像头
+        if (i === 0) {
+            initializeCamera(video);
+            
+            // 添加标签
+            const label = document.createElement('div');
+            label.className = 'video-label';
+            label.textContent = 'Mac摄像头';
+            videoPanel.appendChild(label);
+        } else {
+            // 其他面板显示离线状态
+            const placeholder = document.createElement('div');
+            placeholder.className = 'video-placeholder';
+            placeholder.textContent = '未连接';
+            videoPanel.appendChild(placeholder);
+        }
+        
+        videoPanel.appendChild(video);
+        videoGrid.appendChild(videoPanel);
+    }
+}
+
+// 切换布局
+function switchLayout(layout) {
+    const videoGrid = document.getElementById('videoGrid');
+    videoGrid.className = `video-grid grid-${layout}`;
+    // 保持Mac摄像头在切换布局后继续工作
+}
+
+// 拍照功能
+function takeSnapshot(index) {
+    const video = document.getElementById(`video-${index}`);
+    if (!video.srcObject) {
+        showError('该摄像头未启动');
+        return;
+    }
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // 保存图片
+    const link = document.createElement('a');
+    link.download = `snapshot-${new Date().getTime()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
+// 页面关闭时清理资源
+window.addEventListener('beforeunload', () => {
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+    }
+    if (macVideoStream) {
+        macVideoStream.getTracks().forEach(track => track.stop());
+    }
 });
 
 // 加载设备列表
@@ -607,3 +824,230 @@ document.addEventListener('click', function(event) {
         dropdown.classList.remove('show');
     }
 });
+
+// 显示错误消息
+function showError(message) {
+    // 可以根据需要实现错误提示UI
+    alert(message);
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', initVideoGrid);
+
+// 初始化函数
+async function initializeMonitor() {
+    console.log('正在初始化监控页面...');
+    await setupVideoGrid();
+}
+
+// 设置视频网格
+async function setupVideoGrid() {
+    const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) {
+        console.error('找不到视频网格元素');
+        return;
+    }
+
+    // 清空现有内容
+    videoGrid.innerHTML = '';
+
+    // 创建第一个视频面板（Mac摄像头）
+    const macPanel = createVideoPanel();
+    videoGrid.appendChild(macPanel);
+
+    // 初始化Mac摄像头
+    try {
+        await initializeMacCamera(macPanel.querySelector('video'));
+    } catch (error) {
+        console.error('初始化Mac摄像头失败:', error);
+    }
+
+    // 添加其他三个空面板
+    for (let i = 0; i < 3; i++) {
+        const emptyPanel = createEmptyPanel();
+        videoGrid.appendChild(emptyPanel);
+    }
+}
+
+// 创建视频面板
+function createVideoPanel() {
+    const panel = document.createElement('div');
+    panel.className = 'video-panel';
+    
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.playsInline = true;
+    
+    const label = document.createElement('div');
+    label.className = 'video-label';
+    label.textContent = 'Mac摄像头';
+    
+    const controls = document.createElement('div');
+    controls.className = 'video-controls-overlay';
+    controls.innerHTML = `
+        <button class="video-btn" onclick="takeSnapshot(this)">
+            <i class="fas fa-camera"></i>
+        </button>
+        <button class="video-btn record" onclick="toggleRecording(this)">
+            <i class="fas fa-circle"></i>
+        </button>
+    `;
+    
+    panel.appendChild(video);
+    panel.appendChild(label);
+    panel.appendChild(controls);
+    
+    return panel;
+}
+
+// 创建空面板
+function createEmptyPanel() {
+    const panel = document.createElement('div');
+    panel.className = 'video-panel';
+    
+    const empty = document.createElement('div');
+    empty.className = 'empty-panel';
+    empty.innerHTML = `
+        <div class="empty-icon">
+            <i class="fas fa-video-slash"></i>
+        </div>
+        <div>未连接</div>
+    `;
+    
+    panel.appendChild(empty);
+    return panel;
+}
+
+// 初始化Mac摄像头
+async function initializeMacCamera(videoElement) {
+    try {
+        console.log('正在请求摄像头权限...');
+        macVideoStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        });
+        
+        videoElement.srcObject = macVideoStream;
+        console.log('Mac摄像头已成功初始化');
+        
+        // 添加视频播放事件监听
+        videoElement.onplay = () => console.log('视频开始播放');
+        videoElement.onerror = (e) => console.error('视频播放错误:', e);
+    } catch (error) {
+        console.error('访问摄像头失败:', error);
+        throw error;
+    }
+}
+
+// 切换布局
+function switchLayout(type) {
+    // 更新布局按钮状态
+    document.querySelectorAll('.layout-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.querySelector('span').textContent.includes(getLayoutText(type))) {
+            btn.classList.add('active');
+        }
+    });
+
+    // 更新视频网格布局
+    const videoGrid = document.getElementById('videoGrid');
+    videoGrid.className = `video-grid grid-${type}`;
+    
+    // 根据布局类型调整视频面板
+    adjustPanels(type);
+}
+
+// 获取布局文本
+function getLayoutText(type) {
+    switch(type) {
+        case '1': return '单屏';
+        case '4': return '四分屏';
+        case '9': return '九分屏';
+        default: return '';
+    }
+}
+
+// 调整视频面板数量
+function adjustPanels(type) {
+    const videoGrid = document.getElementById('videoGrid');
+    const currentPanels = videoGrid.children.length;
+    const targetPanels = parseInt(type);
+    
+    // 如果需要添加面板
+    while (videoGrid.children.length < targetPanels) {
+        const index = videoGrid.children.length;
+        const panel = index === 0 ? createVideoPanel(0) : createEmptyPanel(index);
+        videoGrid.appendChild(panel);
+    }
+    
+    // 如果需要移除面板
+    while (videoGrid.children.length > targetPanels) {
+        videoGrid.removeChild(videoGrid.lastChild);
+    }
+    
+    // 确保第一个面板始终显示Mac摄像头
+    if (!videoGrid.querySelector('video')) {
+        const firstPanel = createVideoPanel(0);
+        videoGrid.insertBefore(firstPanel, videoGrid.firstChild);
+        initializeMacCamera(firstPanel.querySelector('video'));
+    }
+}
+
+// 设置页面加载时的初始布局
+document.addEventListener('DOMContentLoaded', () => {
+    switchLayout('4'); // 默认四分屏
+});
+
+// 拍照功能
+function takeSnapshot(button) {
+    const panel = button.closest('.video-panel');
+    const video = panel.querySelector('video');
+    
+    if (!video || !video.srcObject) {
+        alert('摄像头未启动');
+        return;
+    }
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0);
+    
+    // 保存图片
+    const link = document.createElement('a');
+    link.download = `snapshot-${new Date().getTime()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', initializeMonitor);
+
+// 页面关闭前清理资源
+window.addEventListener('beforeunload', () => {
+    if (macVideoStream) {
+        macVideoStream.getTracks().forEach(track => track.stop());
+    }
+});
+
+// 导出布局切换函数
+window.switchLayout = switchLayout;
+window.takeSnapshot = takeSnapshot;
+
+// 设置事件监听器
+function setupEventListeners() {
+    // 布局按钮事件
+    document.querySelectorAll('.layout-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const layout = parseInt(this.getAttribute('data-layout'));
+            setVideoLayout(layout);
+            this.classList.add('active');
+        });
+    });
+    
+    // 其他事件监听器设置...
+}

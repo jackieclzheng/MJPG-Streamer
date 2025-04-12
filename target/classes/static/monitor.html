@@ -6,6 +6,8 @@
     <title>视频监控系统 - 实时监控</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/monitor.css">
+    <!-- 添加字体图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <!-- 导航栏 -->
@@ -64,9 +66,15 @@
             <!-- 视频控制区 -->
             <div class="video-controls">
                 <div class="layout-controls">
-                    <button class="layout-btn" data-layout="1">单屏</button>
-                    <button class="layout-btn active" data-layout="4">四分屏</button>
-                    <button class="layout-btn" data-layout="9">九分屏</button>
+                    <button class="layout-btn" onclick="switchLayout('1')">
+                        <span>单屏</span>
+                    </button>
+                    <button class="layout-btn active" onclick="switchLayout('4')">
+                        <span>四分屏</span>
+                    </button>
+                    <button class="layout-btn" onclick="switchLayout('9')">
+                        <span>九分屏</span>
+                    </button>
                 </div>
                 <div class="action-controls">
                     <button class="action-btn" id="snapshotBtn">拍照</button>
@@ -77,8 +85,8 @@
 
             <!-- 视频网格 -->
             <div class="video-container">
-                <div class="video-grid grid-4" id="videoGrid">
-                    <!-- 视频面板将通过JavaScript动态加载 -->
+                <div id="videoGrid" class="video-grid grid-4">
+                    <!-- 视频面板将通过JavaScript动态添加 -->
                 </div>
             </div>
         </div>

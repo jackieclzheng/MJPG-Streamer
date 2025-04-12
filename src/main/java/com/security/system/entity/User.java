@@ -29,7 +29,7 @@ public class User {
     @Column(length = 20)
     private String phone;
     
-    @Enumerated(EnumType.STRING)
+    @Enumerated(EnumType.STRING)  // 确保使用字符串存储
     @Column(nullable = false)
     private UserRole role = UserRole.USER;
     
@@ -51,8 +51,12 @@ public class User {
     private Set<Device> accessibleDevices;
     
     public enum UserRole {
-        ADMIN, // 管理员
-        OPERATOR, // 操作员
-        USER; // 普通用户
+        ADMIN,           // 普通枚举值
+        USER;
+
+        @Override
+        public String toString() {
+            return name();
+        }
     }
 }
